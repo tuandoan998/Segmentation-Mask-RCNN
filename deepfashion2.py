@@ -83,7 +83,7 @@ class DeepFashion2Config(Config):
 
 class DeepFashion2Dataset(utils.Dataset):
 
-    def load_fashion(self, dataset_dir, subset):
+    def load_fashion(self, dataset_dir, subset, limit_categories=True):
         """Load a subset of the DeepFashion2 dataset.
         dataset_dir: Root directory of the dataset.
         subset: Subset to load: train or val
@@ -111,18 +111,19 @@ class DeepFashion2Dataset(utils.Dataset):
         assert (len(img_paths) == len(anno_paths))
         
         # Limit number image of each class: 100
+        if limit_categories:
+            if subset=='train':
+                category_limit = 200
+            elif subset=='validation':
+                category_limit = 50
         num_categories = np.zeros((13,), dtype=int)
-        if subset=='train':
-            category_limit = 200
-        else:
-            category_limit = 50
 
         # Add images
         print(f'\nLoading images and annotations of {subset} ... ([Number masks of each category])')
         for i in tqdm(range(len(img_paths)), position=0, leave=True):
             if i%1000==0:
                 print(num_categories)
-            if (num_categories>=category_limit).sum() == len(num_categories):
+            if limit_categories and ((num_categories>=category_limit).sum() == len(num_categories)):
                 break
             
             image = skimage.io.imread(img_paths[i])
@@ -141,8 +142,9 @@ class DeepFashion2Dataset(utils.Dataset):
                     y = [poly[1::2] for poly in data[key]['segmentation']] # [[y1, y2, ...], [y1, y2, ...], ...]
                     polygons.append({'all_points_x': x, 'all_points_y': y})
 
-            if all(num_categories[id-1]>=category_limit for id in category_ids):
+            if limit_categories and (all(num_categories[id-1]>=category_limit for id in category_ids)):
                 continue
+            
             for id in category_ids:
                 num_categories[id-1] = num_categories[id-1] + 1
 
