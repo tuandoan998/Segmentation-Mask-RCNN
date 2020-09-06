@@ -1,5 +1,8 @@
 # Segmentation with Mask R-CNN
 
+![](assets/sample1.png)
+![](assets/sample2.png)
+
 ## Dataset
 DeepFashion2 - https://github.com/switchablenorms/DeepFashion2
 
@@ -23,7 +26,7 @@ Best weight: [mask_rcnn_fashion_0119.h5](https://drive.google.com/file/d/1eZIxmB
 
 ![](assets/validation_loss.png)
 
-Details at `train_colab.ipynb`
+Details at `train_colab.ipynb` or [Google Colab](https://colab.research.google.com/drive/1SMkgzluyvFkP_pXo5ijyB0jn0hMtY7h2?usp=sharing)
 
 ## Evaluation
 Result in validation set - **mAP @ IoU=50: 0.2x**
