@@ -29,9 +29,15 @@ Best weight: [mask_rcnn_fashion_0119.h5](https://drive.google.com/file/d/1eZIxmB
 Details at `train_colab.ipynb` or [Google Colab](https://colab.research.google.com/drive/1SMkgzluyvFkP_pXo5ijyB0jn0hMtY7h2?usp=sharing)
 
 ## Evaluation
-Result in validation set - **mAP @ IoU=50: 0.2x**
+```
+python deepfashion2.py evaluate --dataset='data' --weights='/path/to/weight'
+```
+Result in validation set - **mAP @ IoU=50: 0.52** (first 500 images in validation)
 
 ## Inference
+```
+python deepfashion2.py splash --weights="/path/to/weight" --image='/path/to/image'
+```
 
 ## References
 https://github.com/matterport/Mask_RCNN
