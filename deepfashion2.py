@@ -36,6 +36,7 @@ import skimage.draw
 import glob
 from tqdm.notebook import tqdm
 import imgaug
+import time
 
 # Import Mask RCNN
 Mask_RCNN_DIR = os.path.abspath("Mask_RCNN")
@@ -121,7 +122,7 @@ class DeepFashion2Dataset(utils.Dataset):
         # Add images
         print(f'\nLoading images and annotations of {subset} ... ([Number masks of each category])')
         for i in tqdm(range(len(img_paths)), position=0, leave=True):
-            if i%1000==0:
+            if i%2000==0:
                 print(num_categories)
             if limit_categories and ((num_categories>=category_limit).sum() == len(num_categories)):
                 break
@@ -155,6 +156,7 @@ class DeepFashion2Dataset(utils.Dataset):
                 width=width, height=height,
                 polygons=polygons,
                 category_ids=category_ids)
+        print(num_categories)
 
     def load_mask(self, image_id):
         """Generate instance masks for an image.
@@ -211,17 +213,7 @@ def train(model):
     # Right/Left flip 50% of the time
     augmentation = imgaug.augmenters.Fliplr(0.5)
 
-    # *** This training schedule is an example. Update to your needs ***
-    # Since we're using a very small dataset, and starting from
-    # COCO trained weights, we don't need to train too long. Also,
-    # no need to train all layers, just the heads should do it.
-    # print("Training network heads")
-    # model.train(dataset_train, dataset_val,
-    #             learning_rate=config.LEARNING_RATE,
-    #             epochs=30,
-    #             layers='heads')
-
-     # Training - Stage 1
+    # Training - Stage 1
     print("Training network heads")
     model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
@@ -284,6 +276,8 @@ def detect_and_color_splash(model, image_path=None, video_path=None):
         # Save output
         file_name = "splash_{:%Y%m%dT%H%M%S}.png".format(datetime.datetime.now())
         skimage.io.imsave(file_name, splash)
+        io.imshow(splash)
+        plt.show()
     elif video_path:
         import cv2
         # Video capture
@@ -320,6 +314,30 @@ def detect_and_color_splash(model, image_path=None, video_path=None):
     print("Saved to ", file_name)
 
 
+def evaluate(model, dataset, config, limit=0):
+    image_ids = dataset.image_ids
+    if limit:
+        image_ids = image_ids[:limit]
+    t_prediction = 0
+    t_start = time.time()
+    APs = []
+    for image_id in image_ids:
+        image, image_meta, gt_class_id, gt_bbox, gt_mask = modellib.load_image_gt(dataset, \
+            config, image_id, use_mini_mask=False)
+        # image = dataset.load_image(image_id)
+        # gt_mask, gt_class_id = dataset.load_mask(image_id)
+        # gt_bbox = utils.extract_bboxes(gt_mask)
+        t = time.time()
+        r = model.detect([image])[0]
+        t_prediction += (time.time() - t)
+        AP, precisions, recalls, overlaps = utils.compute_ap(gt_bbox, gt_class_id, gt_mask, \
+            r['rois'], r['class_ids'], r['scores'], r['masks'])
+        APs.append(AP)
+    print("Prediction time: {}. Average {}/image".format(t_prediction, t_prediction / len(image_ids)))
+    print("Total time: ", time.time() - t_start)
+    print("mean Average Precision @ IoU=50: ", np.mean(APs))
+
+
 ############################################################
 #  Training
 ############################################################
@@ -329,10 +347,10 @@ if __name__ == '__main__':
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(
-        description='Train Mask R-CNN to detect fashion.')
+        description='Train Mask R-CNN to segment fashion.')
     parser.add_argument("command",
                         metavar="<command>",
-                        help="'train' or 'splash'")
+                        help="'train' or 'evaluate' or 'splash'")
     parser.add_argument('--dataset', required=False,
                         metavar="/path/to/deepfashion2/dataset/",
                         help='Directory of the DeepFashion2 dataset')
@@ -349,14 +367,19 @@ if __name__ == '__main__':
     parser.add_argument('--video', required=False,
                         metavar="path or URL to video",
                         help='Video to apply the color splash effect on')
+    parser.add_argument('--limit', required=False,
+                        default=500,
+                        metavar="<image count>",
+                        help='Images to use for evaluation (default=500)')
     args = parser.parse_args()
 
     # Validate arguments
     if args.command == "train":
         assert args.dataset, "Argument --dataset is required for training"
     elif args.command == "splash":
-        assert args.image or args.video,\
-               "Provide --image or --video to apply color splash"
+        assert args.image or args.video, "Provide --image or --video to apply color splash"
+    elif args.command == "evaluate":
+        assert args.dataset, "Argument --dataset is required for evaluation"
 
     print("Weights: ", args.weights)
     print("Dataset: ", args.dataset)
@@ -371,16 +394,15 @@ if __name__ == '__main__':
             # one image at a time. Batch size = GPU_COUNT * IMAGES_PER_GPU
             GPU_COUNT = 1
             IMAGES_PER_GPU = 1
+            DETECTION_MIN_CONFIDENCE = 0
         config = InferenceConfig()
     config.display()
 
     # Create model
     if args.command == "train":
-        model = modellib.MaskRCNN(mode="training", config=config,
-                                  model_dir=args.logs)
+        model = modellib.MaskRCNN(mode="training", config=config, model_dir=args.logs)
     else:
-        model = modellib.MaskRCNN(mode="inference", config=config,
-                                  model_dir=args.logs)
+        model = modellib.MaskRCNN(mode="inference", config=config, model_dir=args.logs)
 
     # Select weights file to load
     if args.weights.lower() == "coco":
@@ -400,20 +422,23 @@ if __name__ == '__main__':
     # Load weights
     print("Loading weights ", weights_path)
     if args.weights.lower() == "coco":
-        # Exclude the last layers because they require a matching
-        # number of classes
+        # Exclude the last layers because they require a matching number of classes
         model.load_weights(weights_path, by_name=True, exclude=[
-            "mrcnn_class_logits", "mrcnn_bbox_fc",
-            "mrcnn_bbox", "mrcnn_mask"])
+            "mrcnn_class_logits", "mrcnn_bbox_fc", "mrcnn_bbox", "mrcnn_mask"])
     else:
         model.load_weights(weights_path, by_name=True)
 
     # Train or evaluate
     if args.command == "train":
         train(model)
+    elif args.command == "evaluate":
+        # Validation dataset
+        dataset_val = DeepFashion2Dataset()
+        dataset_val.load_fashion(args.dataset, "validation", limit_categories=False)
+        dataset_val.prepare()
+        print("Running evaluation on {} images.".format(args.limit))
+        evaluate(model, dataset_val, config, limit=int(args.limit))
     elif args.command == "splash":
-        detect_and_color_splash(model, image_path=args.image,
-                                video_path=args.video)
+        detect_and_color_splash(model, image_path=args.image, video_path=args.video)
     else:
-        print("'{}' is not recognized. "
-              "Use 'train' or 'splash'".format(args.command))
+        print("'{}' is not recognized. \nUse 'train' or 'splash'".format(args.command))
