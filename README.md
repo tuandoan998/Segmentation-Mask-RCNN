@@ -1,5 +1,6 @@
 # Segmentation with Mask R-CNN
 
+![](assets/demo.gif)
 ![](assets/sample1.png)
 ![](assets/sample2.png)
 
@@ -32,11 +33,16 @@ Details at `train_colab.ipynb` or [Google Colab](https://colab.research.google.c
 ```
 python deepfashion2.py evaluate --dataset='data' --weights='/path/to/weight'
 ```
-Result in validation set - **mAP @ IoU=50: 0.52** (first 500 images in validation)
+Result in validation set - **mAP @ IoU=50: 0.52**
 
 ## Inference
 ```
 python deepfashion2.py splash --weights="/path/to/weight" --image='/path/to/image'
+```
+
+## Demo
+```
+python demo.py
 ```
 
 ## References

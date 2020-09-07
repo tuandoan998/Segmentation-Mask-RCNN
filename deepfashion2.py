@@ -276,8 +276,6 @@ def detect_and_color_splash(model, image_path=None, video_path=None):
         # Save output
         file_name = "splash_{:%Y%m%dT%H%M%S}.png".format(datetime.datetime.now())
         skimage.io.imsave(file_name, splash)
-        io.imshow(splash)
-        plt.show()
     elif video_path:
         import cv2
         # Video capture
@@ -321,7 +319,7 @@ def evaluate(model, dataset, config, limit=0):
     t_prediction = 0
     t_start = time.time()
     APs = []
-    for image_id in image_ids:
+    for image_id in tqdm(image_ids):
         image, image_meta, gt_class_id, gt_bbox, gt_mask = modellib.load_image_gt(dataset, \
             config, image_id, use_mini_mask=False)
         # image = dataset.load_image(image_id)
@@ -333,6 +331,8 @@ def evaluate(model, dataset, config, limit=0):
         AP, precisions, recalls, overlaps = utils.compute_ap(gt_bbox, gt_class_id, gt_mask, \
             r['rois'], r['class_ids'], r['scores'], r['masks'])
         APs.append(AP)
+        if image_id%2000==0:
+            print("mean Average Precision @ IoU=50: ", np.mean(APs))
     print("Prediction time: {}. Average {}/image".format(t_prediction, t_prediction / len(image_ids)))
     print("Total time: ", time.time() - t_start)
     print("mean Average Precision @ IoU=50: ", np.mean(APs))
