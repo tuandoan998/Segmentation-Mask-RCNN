@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Detection demos">
+    <meta name="author" content="fyk@xidian">
+
+    <title>fashion segmentation</title>
+
+    <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
+
+    <script type="text/javascript" src="//code.jquery.com/jquery-2.1.1.js"></script>
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+
+    <!-- Script to instantly classify an image once it is uploaded. -->
+    <script type="text/javascript">
+      $(document).ready(
+        function(){
+          $('#classifyfile').attr('disabled',true);
+          $('#imagefile').change(
+            function(){
+              if ($(this).val()){
+                $('#formupload').submit();
+              }
+            }
+          );
+        }
+      );
+    </script>
+
+    <style>
+    body {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      line-height:1.5em;
+      color: #232323;
+      -webkit-font-smoothing: antialiased;
+      background-image: linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%);
+    }
+
+    h1, h2, h3 {
+      font-family: Times, serif;
+      line-height:1.5em;
+      border-bottom: 1px solid #ccc;
+    }
+    </style>
+  </head>
+
+  <body>
+    <!-- Begin page content -->
+    <div class="container">
+      <div class="page-header" align="center">
+        <h1><a href="/">Fashion Segmentation</a></h1>
+      </div>
+
+      {% if has_result %}
+      
+      <div class="media">
+        <a class="pull-left" href="#">
+          <img src=" {{url_for('send_image', filename=img_name)}}"  class="img-fluid">
+        </a>
+        <div class="media-body">
+          <div class="bs-example bs-example-tabs">
+            <ul id="myTab" class="nav nav-tabs">
+              <li class="active"><a href="#infopred" data-toggle="tab">Prediction</a></li>
+            </ul>
+            <div id="myTabContent" class="tab-content">
+              <div class="tab-pane fade in active" id="infopred">
+                <ul class="list-group">
+                  {% for label_score in label_scores %}
+                  <li class="list-group-item">
+                  <span class="badge">{{ label_score[1] }}</span>
+                  <p class="list-group-item-heading">
+                    <a>{{ label_score[0] }}</a>
+                  </p>
+                  </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+          </div>
+          <p> Time consuming {{ segment_time }} second. </p>
+        </div>
+      </div>
+
+      {% endif %}
+
+      <form id="formupload" class="form-inline" role="form" action="upload" method="post" enctype="multipart/form-data">
+        <div class="form-group">
+          <label for="imagefile">Or upload an image:</label>
+          <input type="file" name="imagefile" id="imagefile">
+        </div>
+      </form>
+    </div>
+
+    <hr>
+    <div id="footer">
+      <div class="container">
+        <marquee>Do the right thing! </marquee>
+      </div>
+   </div>
+ </body>
+</html>
