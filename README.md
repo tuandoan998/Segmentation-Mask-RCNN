@@ -21,8 +21,6 @@ TensorFlow 1.x, Keras 2.0.8 and other common packages listed in [requirements.tx
 python deepfashion2.py train --dataset='data' --weights=coco
 ```
 
-Best weight: [mask_rcnn_fashion_0119.h5](https://drive.google.com/file/d/1eZIxmBvTsfYAXlebAQrnKsexobc7bQQb/view?usp=sharing)
-
 ![](assets/train_loss.png)
 
 ![](assets/validation_loss.png)
